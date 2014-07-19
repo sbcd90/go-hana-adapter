@@ -8,7 +8,12 @@ import (
 
 func main() {
 	conn, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
-	_ = hdb.InitializeModel(conn,"pspnr","`")
+	orm := hdb.InitializeModel(conn,"PSPNR","\"")
+	orm.SetSchema("SAP_ECC")
+	orm.SetTable("PRPS")
+//	orm.SetPrimaryKey("MANDT")
+	orm.SetWhereClause(nil,true)
+	orm.GenerateSQL(true)
 //	stmt, _ := conn.Prepare("select top 1 * from \"SAP_ECC\".\"PROJ\"")
 	stmt, _ := conn.Prepare("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"TABLE_COLUMNS\" where \"SCHEMA_NAME\" = 'SAP_ECC' and \"TABLE_NAME\" = 'PROJ'")
 	stmt.Execute("i076326")
