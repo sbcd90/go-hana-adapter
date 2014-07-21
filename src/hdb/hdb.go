@@ -5,6 +5,7 @@ import (
 		"fmt"
 		_"strconv"
 		_"strings"
+		"reflect"
 )
 
 type Model struct {
@@ -201,5 +202,31 @@ func (orm *Model) SetGroupBy(keys string) *Model{
 func (orm *Model) SetHaving(conditions string) *Model{
 
 	orm.HavingStr = conditions
+	return orm
+}
+
+func (orm *Model) ScanPK(output interface{}) *Model{
+
+
+	if reflect.TypeOf(reflect.Indirect(reflect.ValueOf(output)).Interface()).Kind() == reflect.Slice {
+		sliceValue := reflect.Indirect(reflect.ValueOf(output))
+		sliceElementType := sliceValue.Type().Elem()
+
+		for count :=0;count<sliceElementType.NumField();count++{
+			bb := sliceElementType.Field(count).Tag
+			if bb.Get("hdb") == "PK" || reflect.ValueOf(bb).String() == "PK" {
+				orm.PrimaryKey = sliceElementType.Field(count).Name
+			}
+		}
+	}else{
+		tt := reflect.TypeOf(reflect.Indirect(reflect.ValueOf(output)).Interface())
+		for count :=0;count<tt.NumField();count++{
+			bb := tt.Field(count).Tag
+			if bb.Get("hdb") == "PK" || reflect.ValueOf(bb).String() == "PK" {
+				orm.PrimaryKey = tt.Field(count).Name
+			}
+		}
+	}
+
 	return orm
 }

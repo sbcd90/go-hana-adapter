@@ -5,13 +5,19 @@ import (
 	"fmt"
 	"hdb"
 )
+type Userinfo struct {
+    Uid     int `hdb:"PK" sql:"UID" tname:"USER_INFO"`
+    Departname  string `sql:"DEPARTNAME"`
+}
 
 func main() {
 	conn, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
 	orm := hdb.InitializeModel(conn,"PSPNR","\"")
 	orm.SetSchema("SAP_ECC")
 	orm.SetTable("PRPS")
-	orm.SetPrimaryKey("MANDT")
+//	orm.SetPrimaryKey("MANDT")
+	mtest := Userinfo{Uid : 1,Departname : "AI"}
+	orm.ScanPK(mtest)
 	orm.SetWhereClause(nil,true)
 	orm.SetLimit(2)
 	orm.SetOffset(4)
@@ -19,6 +25,7 @@ func main() {
 	orm.SetColumnString("POSID,PSPNR")
 	orm.SetGroupBy("MANDT")
 	orm.SetHaving("PSPNR = '00000221'")
+
 	orm.GenerateSQL(true)
 //	stmt, _ := conn.Prepare("select top 1 * from \"SAP_ECC\".\"PROJ\"")
 	stmt, _ := conn.Prepare("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"TABLE_COLUMNS\" where \"SCHEMA_NAME\" = 'SAP_ECC' and \"TABLE_NAME\" = 'PROJ'")
