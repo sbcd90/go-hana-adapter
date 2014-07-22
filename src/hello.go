@@ -14,7 +14,7 @@ func main() {
 	conn, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
 	orm := hdb.InitializeModel(conn,"PSPNR","\"")
 	orm.SetSchema("SAP_ECC")
-	orm.SetTable("PRPS")
+	orm.SetTable("PRPS a")
 //	orm.SetPrimaryKey("MANDT")
 	mtest := Userinfo{Uid : 1,Departname : "AI"}
 	orm.ScanPK(mtest)
@@ -22,10 +22,10 @@ func main() {
 	orm.SetLimit(2)
 	orm.SetOffset(4)
 	orm.SetOrderBy("MANDT,PSPNR")
-	orm.SetColumnString("POSID,PSPNR")
+	orm.SetColumnString("POSID,a.PSPNR")
 	orm.SetGroupBy("MANDT")
 	orm.SetHaving("PSPNR = '00000221'")
-
+	orm.Join("INNER","PROJ b","a.PSPHI = b.PSPNR")
 	orm.GenerateSQL(true)
 //	stmt, _ := conn.Prepare("select top 1 * from \"SAP_ECC\".\"PROJ\"")
 	stmt, _ := conn.Prepare("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"TABLE_COLUMNS\" where \"SCHEMA_NAME\" = 'SAP_ECC' and \"TABLE_NAME\" = 'PROJ'")

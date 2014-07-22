@@ -127,6 +127,9 @@ func (orm *Model) GenerateSQL(onDebug bool) (sqlstmt string){
 		}
 		return sqlstmt
 	}
+	if orm.JoinStr != "" {
+		sqlstmt = fmt.Sprintf("%v %v",sqlstmt,orm.JoinStr)
+	}
 	if orm.WhereStr != "" {
 		sqlstmt = fmt.Sprintf("%v WHERE %v",sqlstmt,orm.WhereStr)
 	}
@@ -226,6 +229,17 @@ func (orm *Model) ScanPK(output interface{}) *Model{
 				orm.PrimaryKey = tt.Field(count).Name
 			}
 		}
+	}
+
+	return orm
+}
+
+func (orm *Model) Join(join_operator string, tableName string, conditions string) *Model{
+
+	if orm.JoinStr != ""{
+		orm.JoinStr = orm.JoinStr + fmt.Sprintf(" %v JOIN %v.%v ON %v",join_operator,orm.SchemaName,tableName,conditions)
+	}else{
+		orm.JoinStr = fmt.Sprintf("%v JOIN %v.%v ON %v",join_operator,orm.SchemaName,tableName,conditions)
 	}
 
 	return orm
