@@ -2,7 +2,7 @@ package main
 
 import (
 	_"odbc"
-	"fmt"
+	_"fmt"
 	"hdb"
 )
 type Userinfo struct {
@@ -27,8 +27,15 @@ func main() {
 	orm.SetHaving("PSPNR = '00000221'")
 	orm.Join("INNER","PROJ b","a.PSPHI = b.PSPNR")
 	orm.GenerateSQL(true)
+
+	properties := make(map[string]interface{})
+	properties["A"] = "1"
+	properties["B"] = "2"
+	orm.SetSchema("DEYSUB")
+	orm.SetTable("TESTGOADAPTER")
+	orm.Insert(properties,true)
 //	stmt, _ := conn.Prepare("select top 1 * from \"SAP_ECC\".\"PROJ\"")
-	stmt, _ := conn.Prepare("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"TABLE_COLUMNS\" where \"SCHEMA_NAME\" = 'SAP_ECC' and \"TABLE_NAME\" = 'PROJ'")
+/*	stmt, _ := conn.Prepare("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"TABLE_COLUMNS\" where \"SCHEMA_NAME\" = 'SAP_ECC' and \"TABLE_NAME\" = 'PROJ'")
 	stmt.Execute("i076326")
 	rows, _ := stmt.FetchAll()
 	for i, row := range rows {
@@ -36,5 +43,5 @@ func main() {
 		fmt.Println(i, row)
 	}
 	stmt.Close()
-	conn.Close()
+	conn.Close()*/
 }

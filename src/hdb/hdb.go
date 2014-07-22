@@ -4,7 +4,7 @@ import (
 		"odbc"
 		"fmt"
 		_"strconv"
-		_"strings"
+		"strings"
 		"reflect"
 )
 
@@ -243,4 +243,57 @@ func (orm *Model) Join(join_operator string, tableName string, conditions string
 	}
 
 	return orm
+}
+
+func (orm *Model) Insert(properties map[string]interface{},onDebug bool) (int64,error) {
+
+	var keys []string
+	var placeholders []string
+	var args []interface{}
+
+	for key,val := range properties {
+		keys = append(keys,key)
+		placeholders = append(placeholders,val.(string))
+		orm.ParamIteration++
+		args = append(args,val)
+	}
+
+	regexp1 := fmt.Sprintf("%v,%v",orm.QuoteIdentifier,orm.QuoteIdentifier)
+	regexp2 := fmt.Sprintf(", ")
+
+	statement := fmt.Sprintf("INSERT INTO %v%v%v.%v%v%v (%v%v%v) VALUES (%v)",orm.QuoteIdentifier,orm.SchemaName,orm.QuoteIdentifier,orm.QuoteIdentifier,orm.TableName,orm.QuoteIdentifier,orm.QuoteIdentifier,strings.Join(keys,regexp1),orm.QuoteIdentifier,strings.Join(placeholders,regexp2))
+
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	_,err := orm.Exec(statement,"insert",args)
+
+
+	if err!=nil{
+		return -1,err
+	}else{
+		return 0,err
+	}
+}
+
+func (orm *Model) Exec(finalQueryString string, stmtType string, args ...interface{}) ([]*odbc.Row,error) {
+
+	stmt,err := orm.Db.Prepare(finalQueryString)
+	if err!=nil{
+		return nil,err
+	}
+
+	stmt.Execute("ADMIN")
+	if stmtType!="insert" && stmtType!="update"{
+		rows,err := stmt.FetchAll()
+		if err!=nil{
+			return rows,err
+		}
+		stmt.Close()
+		orm.Db.Close()
+		return nil,err
+	}else{
+		return nil,err
+	}
 }
