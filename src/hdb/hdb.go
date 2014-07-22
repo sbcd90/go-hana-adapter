@@ -277,6 +277,29 @@ func (orm *Model) Insert(properties map[string]interface{},onDebug bool) (int64,
 	}
 }
 
+func (orm *Model) InsertBatch(rows []map[string]interface{}) ([]int64, error){
+
+	fmt.Println(rows[1])
+
+	var returnTypes []int64
+
+	tableName := orm.TableName
+	if len(rows)<=0{
+		return returnTypes,nil
+	}
+
+	for count := 0;count<len(rows);count++{
+		orm.TableName = tableName
+		id,_ := orm.Insert(rows[count],true)
+		//fixes to be made here
+/*		if err!=nil{
+			return returnTypes,err
+		}*/
+		returnTypes = append(returnTypes,id)
+	}
+	return returnTypes,nil
+}
+
 func (orm *Model) Exec(finalQueryString string, stmtType string, args ...interface{}) ([]*odbc.Row,error) {
 
 	stmt,err := orm.Db.Prepare(finalQueryString)

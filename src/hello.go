@@ -28,12 +28,24 @@ func main() {
 	orm.Join("INNER","PROJ b","a.PSPHI = b.PSPNR")
 	orm.GenerateSQL(true)
 
-	properties := make(map[string]interface{})
+	properties := make([]map[string]interface{},0)
+	prop1 := make(map[string]interface{}) 
+	prop1["A"] = "5"
+	prop1["B"] = "6"
+	orm.SetSchema("DEYSUB")
+	orm.SetTable("TESTGOADAPTER")
+	prop2 := make(map[string]interface{}) 
+	prop2["A"] = "3"
+	prop2["B"] = "4"
+	orm.SetSchema("DEYSUB")
+	orm.SetTable("TESTGOADAPTER")
+	properties = append(properties,prop1,prop2)
+	orm.InsertBatch(properties)
+/*	properties := make(map[string]interface{})
 	properties["A"] = "1"
 	properties["B"] = "2"
 	orm.SetSchema("DEYSUB")
-	orm.SetTable("TESTGOADAPTER")
-	orm.Insert(properties,true)
+	orm.SetTable("TESTGOADAPTER")*/
 //	stmt, _ := conn.Prepare("select top 1 * from \"SAP_ECC\".\"PROJ\"")
 /*	stmt, _ := conn.Prepare("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"TABLE_COLUMNS\" where \"SCHEMA_NAME\" = 'SAP_ECC' and \"TABLE_NAME\" = 'PROJ'")
 	stmt.Execute("i076326")
