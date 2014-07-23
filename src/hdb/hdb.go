@@ -3,7 +3,7 @@ package hdb
 import (
 		"odbc"
 		"fmt"
-		_"strconv"
+		"strconv"
 		"strings"
 		"reflect"
 		"errors"
@@ -309,7 +309,7 @@ func (orm *Model) Exec(finalQueryString string, stmtType string, args ...interfa
 	}
 
 	stmt.Execute("ADMIN")
-	if stmtType!="insert" && stmtType!="update"{
+	if stmtType!="insert" && stmtType!="update" && stmtType!="delete"{
 		rows,err := stmt.FetchAll()
 		if err!=nil{
 			return rows,err
@@ -352,6 +352,92 @@ func (orm *Model) Update(properties map[string]interface{},onDebug bool) (int64,
 	}
 
 	return -1,nil
+}
+
+func (orm *Model) Delete(output interface{},onDebug bool) (int64,error) {
+
+	orm.ScanPK(output)
+
+	results,err := ScanStructIntoMap(output)
+
+	if err!=nil{
+		return 0,err
+	}
+
+	id := results[strings.ToLower(orm.PrimaryKey)]
+	condition := fmt.Sprintf("%v%v%v = %v",orm.QuoteIdentifier,orm.PrimaryKey,orm.QuoteIdentifier,id)
+	statement := fmt.Sprintf("DELETE FROM %v%v%v.%v%v%v WHERE %v",orm.QuoteIdentifier,orm.SchemaName,orm.QuoteIdentifier,orm.QuoteIdentifier,orm.TableName,orm.QuoteIdentifier,condition)
+
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	orm.Exec(statement,"delete")
+
+	//error handling to be done
+	return 0,nil
+}
+
+func (orm *Model) DeleteAll(rowsSlicePtr interface{},onDebug bool) (int64,error) {
+
+	orm.ScanPK(rowsSlicePtr)
+
+	var ids []string
+
+	val := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
+	if val.Len()==0{
+		return 0,nil
+	}
+
+	for count:=0;count<val.Len();count++{
+		results,err := ScanStructIntoMap(val.Index(count).Interface())
+		if err!=nil{
+			return 0,err
+		}
+		id := results[strings.ToLower(orm.PrimaryKey)]
+		switch id.(type){
+		case string :
+						ids = append(ids,id.(string))
+		case int,int64,int32 :
+						str := strconv.Itoa(id.(int))
+						ids = append(ids,str)				
+		}
+	}
+
+	regexp := fmt.Sprintf("','")
+	condition := fmt.Sprintf("%v%v%v IN ('%v')",orm.QuoteIdentifier,orm.PrimaryKey,orm.QuoteIdentifier,strings.Join(ids,regexp))
+
+	statement := fmt.Sprintf("DELETE FROM %v%v%v.%v%v%v WHERE %v",orm.QuoteIdentifier,orm.SchemaName,orm.QuoteIdentifier,orm.QuoteIdentifier,orm.TableName,orm.QuoteIdentifier,condition)
+
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	orm.Exec(statement,"delete")
+
+	//error handling to be done
+	return 0,nil
+}
+
+func (orm *Model) DeleteRow(onDebug bool) (int64,error) {
+
+	var condition string
+	if orm.WhereStr!="" {
+		condition = fmt.Sprintf("WHERE %v",orm.WhereStr)
+	}else{
+		condition = ""
+	}
+
+	statement := fmt.Sprintf("DELETE FROM %v%v%v.%v%v%v %v",orm.QuoteIdentifier,orm.SchemaName,orm.QuoteIdentifier,orm.QuoteIdentifier,orm.TableName,orm.QuoteIdentifier,condition)
+
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	orm.Exec(statement,"delete")
+
+	//error handling to be done later
+	return 0,nil
 }
 
 func ScanStructIntoMap(obj interface{}) (map[string]interface{},error) {

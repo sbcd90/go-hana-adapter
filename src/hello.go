@@ -10,6 +10,11 @@ type Userinfo struct {
     Departname  string `sql:"DEPARTNAME"`
 }
 
+type sample struct {
+	A 	string `hdb:"PK" sql:"a"`
+	B 	string `sql:"b"`
+}
+
 type SQLModel struct {
 	Id int `hdb:"PK" sql:"id"`
 }
@@ -27,7 +32,7 @@ func main() {
 //	orm.SetPrimaryKey("MANDT")
 	mtest := Userinfo{Uid : 1,Departname : "AI"}
 	orm.ScanPK(mtest)
-	orm.SetWhereClause("\"A\" = 5",true)
+	orm.SetWhereClause("\"A\" = 1",true)
 	orm.SetLimit(2)
 	orm.SetOffset(4)
 	orm.SetOrderBy("MANDT,PSPNR")
@@ -60,6 +65,12 @@ func main() {
 	ret2,_ := hdb.ScanStructIntoMap(user)
 	fmt.Println(ret1["id"])
 	fmt.Println(ret2["id"])
+	csam := sample{A : "5",B : "6"}
+	csam1 := sample{A : "2",B : "3"}
+	_ = []sample{csam,csam1}
+//	orm.DeleteAll(csam2,true)
+//	orm.Delete(csam,true)
+	orm.DeleteRow(true)
 /*	properties := make(map[string]interface{})
 	properties["A"] = "1"
 	properties["B"] = "2"
