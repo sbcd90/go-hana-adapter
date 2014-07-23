@@ -6,6 +6,7 @@ import (
 		_"strconv"
 		"strings"
 		"reflect"
+		"errors"
 )
 
 type Model struct {
@@ -319,4 +320,102 @@ func (orm *Model) Exec(finalQueryString string, stmtType string, args ...interfa
 	}else{
 		return nil,err
 	}
+}
+
+func (orm *Model) Update(properties map[string]interface{},onDebug bool) (int64, error) {
+
+	var updates []string
+	var args []interface{}
+
+	for key,val := range properties {
+		updates = append(updates,fmt.Sprintf("%v%v%v = %v",orm.QuoteIdentifier,key,orm.QuoteIdentifier,val))
+		args = append(args,val)
+		orm.ParamIteration++
+	}
+
+	args = append(args,orm.ParamStr...)
+
+	var condition string
+
+	if orm.WhereStr!=""{
+		condition = fmt.Sprintf("WHERE %v",orm.WhereStr)
+	}else{
+		condition = ""
+	}
+
+	regexp := fmt.Sprintf(", ")
+
+	statement := fmt.Sprintf("UPDATE %v%v%v.%v%v%v SET %v %v",orm.QuoteIdentifier,orm.SchemaName,orm.QuoteIdentifier,orm.QuoteIdentifier,orm.TableName,orm.QuoteIdentifier,strings.Join(updates,regexp),condition)
+
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	return -1,nil
+}
+
+func ScanStructIntoMap(obj interface{}) (map[string]interface{},error) {
+
+	dataStruct := reflect.Indirect(reflect.ValueOf(obj))
+	if dataStruct.Kind() !=reflect.Struct{
+		return nil,errors.New("expected a pointer to a struct")
+	}
+
+	dataStructType := dataStruct.Type()
+
+	mapped := make(map[string]interface{})
+
+	for count:=0;count<dataStructType.NumField();count++{
+		field := dataStructType.Field(count)
+		fieldv := dataStruct.Field(count)
+
+		fieldName := field.Name
+		bb := field.Tag
+		sqlTag := bb.Get("sql")
+		sqlTags := strings.Split(sqlTag,",")
+		var mapkey string
+
+		inline := false
+
+		if bb.Get("hdb")=="-" || sqlTag=="-" || reflect.ValueOf(bb).String()=="-"{
+			continue
+		}else if len(sqlTag) > 0{
+			if sqlTags[0]=="-"{
+				continue
+			}
+			mapkey = sqlTags[0]
+		}else{
+			mapkey = fieldName
+		}
+
+		if len(sqlTags) > 1{
+			if StringArrayContains("inline",sqlTags[1:]){
+				inline = true
+			}
+		}
+
+		if inline{
+			map2,err2 := ScanStructIntoMap(fieldv.Interface())
+			if err2!=nil{
+				return mapped,err2
+			}
+			for key,val:= range map2{
+				mapped[key] = val
+			}
+		}else{
+			value := dataStruct.FieldByName(fieldName).Interface()
+			mapped[mapkey] = value
+		}
+	}
+	return mapped,nil
+}
+
+func StringArrayContains(needle string, haystack []string) bool {
+	//looping through 1 dim map
+	for _, v := range haystack {
+		if needle == v {
+			return true
+		}
+	}
+	return false
 }

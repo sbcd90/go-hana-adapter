@@ -2,12 +2,21 @@ package main
 
 import (
 	_"odbc"
-	_"fmt"
+	"fmt"
 	"hdb"
 )
 type Userinfo struct {
     Uid     int `hdb:"PK" sql:"UID" tname:"USER_INFO"`
     Departname  string `sql:"DEPARTNAME"`
+}
+
+type SQLModel struct {
+	Id int `hdb:"PK" sql:"id"`
+}
+
+type User struct {
+	SQLModel `sql:",inline"`
+	Auth int `sql:"auth"`
 }
 
 func main() {
@@ -18,7 +27,7 @@ func main() {
 //	orm.SetPrimaryKey("MANDT")
 	mtest := Userinfo{Uid : 1,Departname : "AI"}
 	orm.ScanPK(mtest)
-	orm.SetWhereClause(nil,true)
+	orm.SetWhereClause("\"A\" = 5",true)
 	orm.SetLimit(2)
 	orm.SetOffset(4)
 	orm.SetOrderBy("MANDT,PSPNR")
@@ -41,6 +50,16 @@ func main() {
 	orm.SetTable("TESTGOADAPTER")
 	properties = append(properties,prop1,prop2)
 	orm.InsertBatch(properties)
+	prop3 := make(map[string]interface{})
+	prop3["A"] = "7"
+	prop3["B"] = "8"
+	orm.Update(prop3,true)
+	sqlmodel := SQLModel{Id : 1}
+	ret1,_ := hdb.ScanStructIntoMap(sqlmodel)
+	user := User{SQLModel : sqlmodel,Auth : 2}
+	ret2,_ := hdb.ScanStructIntoMap(user)
+	fmt.Println(ret1["id"])
+	fmt.Println(ret2["id"])
 /*	properties := make(map[string]interface{})
 	properties["A"] = "1"
 	properties["B"] = "2"
