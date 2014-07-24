@@ -118,6 +118,38 @@ func (orm *Model) SetWhereClause(querystring interface{}, onDebug bool,args ...i
 	return orm
 }
 
+func (orm *Model) Find(output interface{}) (map[string]string,error) {
+
+	orm.ScanPK(output)
+	var keys []string
+
+	results,err := ScanStructIntoMap(output)
+	if err!=nil{
+		return nil,err
+	}
+	if orm.ColumnStr=="*"{
+		for key,_ := range results{
+			keys = append(keys,key)
+		}
+		regexp := fmt.Sprintf(", ")
+		orm.ColumnStr = strings.Join(keys,regexp)
+	}
+	orm.SetLimit(1)
+	resultsSlice,err := orm.FindMap()
+	if err!=nil{
+		return nil,err
+	}
+
+	if len(resultsSlice)==0{
+		return nil,errors.New("No records found")
+	}else if len(resultsSlice)==1{
+		return resultsSlice[1],nil
+	}else{
+		return nil,errors.New("More than 1 record")
+	}
+
+}
+
 func (orm *Model) GenerateSQL(onDebug bool) (sqlstmt string){
 
 	if orm.ColumnStr !="" && orm.TableName !="" && orm.SchemaName !=""{
@@ -258,7 +290,7 @@ func (orm *Model) Upsert(properties map[string]interface{},onDebug bool) (int64,
 		orm.ParamIteration++
 		args = append(args,val)
 	}
-	
+
 	regexp2 := fmt.Sprintf(", ")
 
 	statement := fmt.Sprintf("UPSERT %v%v%v.%v%v%v VALUES (%v) WHERE %v",orm.QuoteIdentifier,orm.SchemaName,orm.QuoteIdentifier,orm.QuoteIdentifier,orm.TableName,orm.QuoteIdentifier,strings.Join(placeholders,regexp2),orm.WhereStr)
