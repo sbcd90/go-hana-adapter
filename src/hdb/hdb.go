@@ -246,6 +246,37 @@ func (orm *Model) Join(join_operator string, tableName string, conditions string
 	return orm
 }
 
+func (orm *Model) Upsert(properties map[string]interface{},onDebug bool) (int64,error) {
+
+	var keys []string
+	var placeholders []string
+	var args []interface{}
+
+	for key,val := range properties {
+		keys = append(keys,key)
+		placeholders = append(placeholders,val.(string))
+		orm.ParamIteration++
+		args = append(args,val)
+	}
+	
+	regexp2 := fmt.Sprintf(", ")
+
+	statement := fmt.Sprintf("UPSERT %v%v%v.%v%v%v VALUES (%v) WHERE %v",orm.QuoteIdentifier,orm.SchemaName,orm.QuoteIdentifier,orm.QuoteIdentifier,orm.TableName,orm.QuoteIdentifier,strings.Join(placeholders,regexp2),orm.WhereStr)
+
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	_,err := orm.Exec(statement,"insert",args)
+
+
+	if err!=nil{
+		return -1,err
+	}else{
+		return 0,err
+	}
+}
+
 func (orm *Model) Insert(properties map[string]interface{},onDebug bool) (int64,error) {
 
 	var keys []string
@@ -438,6 +469,19 @@ func (orm *Model) DeleteRow(onDebug bool) (int64,error) {
 
 	//error handling to be done later
 	return 0,nil
+}
+
+func (orm *Model) Save(output interface{},onDebug bool) error {
+
+	orm.ScanPK(output)
+
+	results,err := ScanStructIntoMap(output)
+
+	if err==nil{
+		orm.Upsert(results,onDebug)
+	}
+
+	return nil
 }
 
 func ScanStructIntoMap(obj interface{}) (map[string]interface{},error) {

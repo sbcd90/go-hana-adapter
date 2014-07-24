@@ -65,12 +65,13 @@ func main() {
 	ret2,_ := hdb.ScanStructIntoMap(user)
 	fmt.Println(ret1["id"])
 	fmt.Println(ret2["id"])
-	csam := sample{A : "5",B : "6"}
+	csam := sample{A : "9",B : "10"}
 	csam1 := sample{A : "2",B : "3"}
 	_ = []sample{csam,csam1}
 //	orm.DeleteAll(csam2,true)
 //	orm.Delete(csam,true)
-	orm.DeleteRow(true)
+//	orm.DeleteRow(true)
+	orm.Save(csam,true)
 /*	properties := make(map[string]interface{})
 	properties["A"] = "1"
 	properties["B"] = "2"
