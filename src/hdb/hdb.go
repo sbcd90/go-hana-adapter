@@ -118,24 +118,35 @@ func (orm *Model) SetWhereClause(querystring interface{}, onDebug bool,args ...i
 	return orm
 }
 
-func (orm *Model) Find(output interface{}) (map[string]string,error) {
+func (orm *Model) Find(output interface{},onDebug bool) (map[string]string,error) {
 
 	orm.ScanPK(output)
 	var keys []string
+	var values []string
+	var args string
 
 	results,err := ScanStructIntoMap(output)
 	if err!=nil{
 		return nil,err
 	}
+	args = ""
+
 	if orm.ColumnStr=="*"{
-		for key,_ := range results{
+		for key,val := range results{
 			keys = append(keys,key)
+			values = append(values,ConvertAnyTypeToString(val))
+			if args!=""{
+				args = fmt.Sprintf("%v AND %v = %v",args,key,ConvertAnyTypeToString(val))
+			}else{
+				args = fmt.Sprintf("%v = %v",key,val)
+			}
 		}
 		regexp := fmt.Sprintf(", ")
 		orm.ColumnStr = strings.Join(keys,regexp)
+		orm.WhereStr = args
 	}
 	orm.SetLimit(1)
-	resultsSlice,err := orm.FindMap()
+	resultsSlice,err := orm.FindMap(onDebug)
 	if err!=nil{
 		return nil,err
 	}
@@ -148,6 +159,28 @@ func (orm *Model) Find(output interface{}) (map[string]string,error) {
 		return nil,errors.New("More than 1 record")
 	}
 
+}
+
+func (orm *Model) FindMap(onDebug bool) (resultsSlice []map[string]string, err error) {
+
+	statement := orm.GenerateSQL(onDebug)
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	results,erro := orm.Exec(statement,"select")
+
+	//error handling to be done
+	for count, row := range results {
+		if row.GetString(count)!=""{
+			fmt.Println(row.GetString(count))
+		}else if row.GetInt(count)!=0{
+			fmt.Println(row.GetInt(count))
+		}
+		fmt.Println(count, row)
+	}
+
+	return nil,erro
 }
 
 func (orm *Model) GenerateSQL(onDebug bool) (sqlstmt string){
@@ -375,11 +408,11 @@ func (orm *Model) Exec(finalQueryString string, stmtType string, args ...interfa
 	if stmtType!="insert" && stmtType!="update" && stmtType!="delete"{
 		rows,err := stmt.FetchAll()
 		if err!=nil{
-			return rows,err
+			return nil,err
 		}
 		stmt.Close()
 		orm.Db.Close()
-		return nil,err
+		return rows,err
 	}else{
 		return nil,err
 	}
@@ -580,4 +613,23 @@ func StringArrayContains(needle string, haystack []string) bool {
 		}
 	}
 	return false
+}
+
+func ConvertAnyTypeToString(val interface{}) string {
+
+	var str string
+	switch (reflect.Indirect(reflect.ValueOf(val))).Kind(){
+		case reflect.Int,reflect.Int8,reflect.Int16,reflect.Int32,reflect.Int64 : 
+						str = strconv.FormatInt(reflect.ValueOf(reflect.Indirect(reflect.ValueOf(val)).Interface()).Int(),10)
+		case reflect.Uint8,reflect.Uint16,reflect.Uint32,reflect.Uint64 :
+						str = strconv.FormatUint(reflect.ValueOf(reflect.Indirect(reflect.ValueOf(val)).Interface()).Uint(),10)
+		case reflect.Float32,reflect.Float64 :
+						str = strconv.FormatFloat(reflect.ValueOf(reflect.Indirect(reflect.ValueOf(val)).Interface()).Float(),'f',-1,64)
+		case reflect.Bool :
+						str = strconv.FormatBool(reflect.ValueOf(reflect.Indirect(reflect.ValueOf(val)).Interface()).Bool())	
+		case reflect.String :
+						str = reflect.ValueOf(reflect.Indirect(reflect.ValueOf(val)).Interface()).String()															
+	}
+
+	return str
 }

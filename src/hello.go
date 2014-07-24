@@ -10,9 +10,13 @@ type Userinfo struct {
     Departname  string `sql:"DEPARTNAME"`
 }
 
+type prps struct {
+	POSID 	string `hdb:"PK" sql:"POSID"`
+	PSPNR 	string `sql:"PSPNR"`
+}
+
 type sample struct {
-	A 	string `hdb:"PK" sql:"a"`
-	B 	string `sql:"b"`
+	A 	int `hdb:"PK" sql:"A"`
 }
 
 type SQLModel struct {
@@ -27,7 +31,7 @@ type User struct {
 func main() {
 	conn, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
 	orm := hdb.InitializeModel(conn,"PSPNR","\"")
-	orm.SetSchema("SAP_ECC")
+/*	orm.SetSchema("SAP_ECC")
 	orm.SetTable("PRPS a")
 //	orm.SetPrimaryKey("MANDT")
 	mtest := Userinfo{Uid : 1,Departname : "AI"}
@@ -40,7 +44,7 @@ func main() {
 	orm.SetGroupBy("MANDT")
 	orm.SetHaving("PSPNR = '00000221'")
 	orm.Join("INNER","PROJ b","a.PSPHI = b.PSPNR")
-	orm.GenerateSQL(true)
+	orm.GenerateSQL(true)*/
 
 	properties := make([]map[string]interface{},0)
 	prop1 := make(map[string]interface{}) 
@@ -65,13 +69,14 @@ func main() {
 	ret2,_ := hdb.ScanStructIntoMap(user)
 	fmt.Println(ret1["id"])
 	fmt.Println(ret2["id"])
-	csam := sample{A : "9",B : "10"}
-	csam1 := sample{A : "2",B : "3"}
-	_ = []sample{csam,csam1}
+	csam := sample{A : 5}
+//	csam1 := sample{A : "2",B : "3"}
+//	_ = []sample{csam,csam1}
 //	orm.DeleteAll(csam2,true)
 //	orm.Delete(csam,true)
 //	orm.DeleteRow(true)
-	orm.Save(csam,true)
+//	orm.Save(csam,true)
+	orm.Find(csam,true)
 /*	properties := make(map[string]interface{})
 	properties["A"] = "1"
 	properties["B"] = "2"
