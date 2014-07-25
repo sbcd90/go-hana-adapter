@@ -158,18 +158,16 @@ func (orm *Model) Find(output interface{},onDebug bool) (map[string]interface{},
 	}
 	args = ""
 
-	if orm.ColumnStr=="*"{
-		for key,val := range results{
-			keys = append(keys,key)
-			values = append(values,ConvertAnyTypeToString(val))
-			if args!=""{
-				args = fmt.Sprintf("%v AND %v = %v",args,key,ConvertAnyTypeToString(val))
-			}else{
-				args = fmt.Sprintf("%v = %v",key,val)
-			}
+	for key,val := range results{
+		keys = append(keys,key)
+		values = append(values,ConvertAnyTypeToString(val))
+		if args!=""{
+			args = fmt.Sprintf("%v AND %v = %v",args,key,ConvertAnyTypeToString(val))
+		}else{
+			args = fmt.Sprintf("%v = %v",key,val)
 		}
-		orm.WhereStr = args
 	}
+	orm.WhereStr = args
 	orm.SetLimit(1)
 	resultsSlice,err := orm.FindMap(onDebug)
 	if err!=nil{
@@ -186,6 +184,55 @@ func (orm *Model) Find(output interface{},onDebug bool) (map[string]interface{},
 
 }
 
+func (orm *Model) FindAll(rowsSlicePtr []interface{},onDebug bool) (resultsSlice []map[string]interface{}, err error) {
+	
+	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
+
+	if sliceValue.Kind() != reflect.Slice{
+		return nil,errors.New("need a pointer to a slice")
+	}
+
+	orm.ScanPK(rowsSlicePtr[0])
+
+	var keys []string
+	var values []string
+	var args string
+
+	args = ""
+	for count:=0;count<len(rowsSlicePtr);count++{
+		results,err := ScanStructIntoMap(rowsSlicePtr[count])
+		if err!=nil{
+			return nil,err
+		}
+
+		if count==0{
+			args = args + "("
+		}else{
+			args = args + " OR ("
+		}
+
+		for key,val := range results{
+			keys = append(keys,key)
+			values = append(values,ConvertAnyTypeToString(val))
+			if !strings.HasSuffix(args,"("){
+				args = fmt.Sprintf("%v AND %v = %v",args,key,ConvertAnyTypeToString(val))
+			}else{
+				args = fmt.Sprintf("%v %v = %v",args,key,val)
+			}
+		}
+		args = args + " )"	
+	}
+	orm.WhereStr = args
+
+	resultsSlice,err = orm.FindMap(onDebug)
+
+	if err!=nil{
+		return nil,err
+	}
+
+	return resultsSlice,nil
+}
+
 func (orm *Model) FindMap(onDebug bool) (resultsSlice []map[string]interface{}, err error) {
 
 	statement := orm.GenerateSQL(onDebug)
@@ -195,13 +242,16 @@ func (orm *Model) FindMap(onDebug bool) (resultsSlice []map[string]interface{}, 
 
 	results,erro := orm.Exec(statement,"select")
 
-	singleRow := make(map[string]interface{})
+	var singleRow map[string]interface{}
 
 	//error handling to be done
 	for _, row := range results {
-		for incr,rowMeta := range resultsMetadata{
-			fieldVal := row.Data[incr]
+		singleRow = make(map[string]interface{})
+		count := 0
+		for _,rowMeta := range resultsMetadata{
+			fieldVal := row.Data[count]
 			singleRow[rowMeta.GetString(0)] = (reflect.Indirect(reflect.ValueOf(fieldVal))).Interface()
+			count = count + 1
 		}
 		resultsSlice = append(resultsSlice,singleRow)
 	}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	_"odbc"
+	_"reflect"
 	"fmt"
 	"hdb"
 )
@@ -46,7 +46,7 @@ func main() {
 	orm.Join("INNER","PROJ b","a.PSPHI = b.PSPNR")
 	orm.GenerateSQL(true)*/
 
-	properties := make([]map[string]interface{},0)
+/*	properties := make([]map[string]interface{},0)
 	prop1 := make(map[string]interface{}) 
 	prop1["A"] = "5"
 	prop1["B"] = "6"
@@ -57,25 +57,31 @@ func main() {
 	prop2["B"] = "4"
 	orm.SetSchema("DEYSUB")
 	orm.SetTable("TESTGOADAPTER")
-	properties = append(properties,prop1,prop2)
-	orm.InsertBatch(properties)
+//	properties = append(properties,prop1,prop2)
+//	orm.InsertBatch(properties)
 	prop3 := make(map[string]interface{})
 	prop3["A"] = "7"
 	prop3["B"] = "8"
-	orm.Update(prop3,true)
+//	orm.Update(prop3,true)
 //	sqlmodel := SQLModel{Id : 1}
 //	ret1,_ := hdb.ScanStructIntoMap(sqlmodel)
 //	user := User{SQLModel : sqlmodel,Auth : 2}
-//	ret2,_ := hdb.ScanStructIntoMap(user)
+//	ret2,_ := hdb.ScanStructIntoMap(user)*/
+	orm.SetSchema("DEYSUB")
+	orm.SetTable("TESTGOADAPTER")
 	csam := sample{A : 5}
-//	csam1 := sample{A : "2",B : "3"}
+	csam1 := sample{A : 9}
+	var properties1 []interface{} 
+	properties1 = append(properties1,csam1,csam)
+	test,_ := orm.FindAll(properties1,true)
+	fmt.Println(test)
 //	_ = []sample{csam,csam1}
 //	orm.DeleteAll(csam2,true)
 //	orm.Delete(csam,true)
 //	orm.DeleteRow(true)
 //	orm.Save(csam,true)
-	test,_ := orm.Find(csam,true)
-	fmt.Println(test)
+//	test,_ := orm.Find(csam,true)
+//	fmt.Println((reflect.Indirect(reflect.ValueOf(test["A"]))).Kind())
 /*	properties := make(map[string]interface{})
 	properties["A"] = "1"
 	properties["B"] = "2"
