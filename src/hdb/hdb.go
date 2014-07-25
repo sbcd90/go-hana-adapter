@@ -13,6 +13,7 @@ type Model struct {
 	Db              *odbc.Connection
 	SchemaName      string
 	TableName       string
+	ViewName 		string
 	LimitStr        int
 	OffsetStr       int
 	WhereStr        string
@@ -30,8 +31,16 @@ type Model struct {
 }
 
 var onDebug = false
+var resultsMetadata []*odbc.Row
+var systemDSN string
+var userName string
+var passWord string
 
 func Connect(dsn string, username string, password string, onDebug bool) (conn *odbc.Connection, err *odbc.ODBCError) {
+
+	systemDSN = dsn
+	userName = username
+	passWord = password
 
 	prepareString := "DSN=" + dsn + ";UID=" + username + ";PWD=" + password
 	if onDebug {
@@ -83,6 +92,26 @@ func (orm *Model) SetSchema(schemaName string) *Model{
 func (orm *Model) SetTable(tableName string) *Model{
 
 	orm.TableName = tableName
+
+	tmpconn,_ := Connect(systemDSN,userName,passWord,false)  
+	tmporm := InitializeModel(tmpconn)
+	if orm.SchemaName!=""{
+		resultsMetadata,_ = tmporm.Exec("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"TABLE_COLUMNS\" where \"SCHEMA_NAME\" = '" + orm.SchemaName + "' and \"TABLE_NAME\" = '" + orm.TableName + "'","select")
+	}
+	tmpconn.Close()
+	return orm
+}
+
+func (orm *Model) SetView(viewName string) *Model{
+
+	orm.ViewName = viewName
+
+	tmpconn,_ := Connect(systemDSN,userName,passWord,false)  
+	tmporm := InitializeModel(tmpconn)
+	if orm.SchemaName!=""{
+		resultsMetadata,_ = tmporm.Exec("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"VIEW_COLUMNS\" where \"SCHEMA_NAME\" = '" + orm.SchemaName + "' and \"VIEW_NAME\" = '" + orm.ViewName + "'","select")
+	}
+	tmpconn.Close()
 	return orm
 }
 
@@ -90,9 +119,7 @@ func (orm *Model) SetPrimaryKey(primaryKey string) *Model{
 
 	//support composite primary key
 
-	fmt.Println(orm.PrimaryKey)
 	orm.PrimaryKey = primaryKey
-	fmt.Println(orm.PrimaryKey)
 	return orm
 }
 
@@ -118,7 +145,7 @@ func (orm *Model) SetWhereClause(querystring interface{}, onDebug bool,args ...i
 	return orm
 }
 
-func (orm *Model) Find(output interface{},onDebug bool) (map[string]string,error) {
+func (orm *Model) Find(output interface{},onDebug bool) (map[string]interface{},error) {
 
 	orm.ScanPK(output)
 	var keys []string
@@ -141,8 +168,6 @@ func (orm *Model) Find(output interface{},onDebug bool) (map[string]string,error
 				args = fmt.Sprintf("%v = %v",key,val)
 			}
 		}
-		regexp := fmt.Sprintf(", ")
-		orm.ColumnStr = strings.Join(keys,regexp)
 		orm.WhereStr = args
 	}
 	orm.SetLimit(1)
@@ -154,14 +179,14 @@ func (orm *Model) Find(output interface{},onDebug bool) (map[string]string,error
 	if len(resultsSlice)==0{
 		return nil,errors.New("No records found")
 	}else if len(resultsSlice)==1{
-		return resultsSlice[1],nil
+		return resultsSlice[0],nil
 	}else{
 		return nil,errors.New("More than 1 record")
 	}
 
 }
 
-func (orm *Model) FindMap(onDebug bool) (resultsSlice []map[string]string, err error) {
+func (orm *Model) FindMap(onDebug bool) (resultsSlice []map[string]interface{}, err error) {
 
 	statement := orm.GenerateSQL(onDebug)
 	if onDebug{
@@ -170,17 +195,21 @@ func (orm *Model) FindMap(onDebug bool) (resultsSlice []map[string]string, err e
 
 	results,erro := orm.Exec(statement,"select")
 
-	//error handling to be done
-	for count, row := range results {
-		if row.GetString(count)!=""{
-			fmt.Println(row.GetString(count))
-		}else if row.GetInt(count)!=0{
-			fmt.Println(row.GetInt(count))
-		}
-		fmt.Println(count, row)
-	}
+	singleRow := make(map[string]interface{})
 
-	return nil,erro
+	//error handling to be done
+	for _, row := range results {
+		for incr,rowMeta := range resultsMetadata{
+			fieldVal := row.Data[incr]
+			singleRow[rowMeta.GetString(0)] = (reflect.Indirect(reflect.ValueOf(fieldVal))).Interface()
+		}
+		resultsSlice = append(resultsSlice,singleRow)
+	}
+	if len(resultsSlice) > 0{
+		return resultsSlice,nil
+	}else{
+		return nil,erro
+	}
 }
 
 func (orm *Model) GenerateSQL(onDebug bool) (sqlstmt string){
@@ -228,7 +257,6 @@ func (orm *Model) GenerateSQL(onDebug bool) (sqlstmt string){
 	if orm.LimitStr > 0 && orm.OffsetStr == 0{
 		sqlstmt = fmt.Sprintf("%v LIMIT %v",sqlstmt,orm.LimitStr)
 	}
-	fmt.Println(sqlstmt)
 	return sqlstmt
 }
 
@@ -375,8 +403,6 @@ func (orm *Model) Insert(properties map[string]interface{},onDebug bool) (int64,
 }
 
 func (orm *Model) InsertBatch(rows []map[string]interface{}) ([]int64, error){
-
-	fmt.Println(rows[1])
 
 	var returnTypes []int64
 

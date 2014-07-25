@@ -63,12 +63,10 @@ func main() {
 	prop3["A"] = "7"
 	prop3["B"] = "8"
 	orm.Update(prop3,true)
-	sqlmodel := SQLModel{Id : 1}
-	ret1,_ := hdb.ScanStructIntoMap(sqlmodel)
-	user := User{SQLModel : sqlmodel,Auth : 2}
-	ret2,_ := hdb.ScanStructIntoMap(user)
-	fmt.Println(ret1["id"])
-	fmt.Println(ret2["id"])
+//	sqlmodel := SQLModel{Id : 1}
+//	ret1,_ := hdb.ScanStructIntoMap(sqlmodel)
+//	user := User{SQLModel : sqlmodel,Auth : 2}
+//	ret2,_ := hdb.ScanStructIntoMap(user)
 	csam := sample{A : 5}
 //	csam1 := sample{A : "2",B : "3"}
 //	_ = []sample{csam,csam1}
@@ -76,7 +74,8 @@ func main() {
 //	orm.Delete(csam,true)
 //	orm.DeleteRow(true)
 //	orm.Save(csam,true)
-	orm.Find(csam,true)
+	test,_ := orm.Find(csam,true)
+	fmt.Println(test)
 /*	properties := make(map[string]interface{})
 	properties["A"] = "1"
 	properties["B"] = "2"
