@@ -2,7 +2,7 @@ package main
 
 import (
 	_"reflect"
-	"fmt"
+	_"fmt"
 	"hdb"
 )
 type Userinfo struct {
@@ -29,8 +29,8 @@ type User struct {
 }
 
 func main() {
-	conn, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
-	orm := hdb.InitializeModel(conn,"PSPNR","\"")
+//	conn, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
+//	orm := hdb.InitializeModel(conn,"PSPNR","\"")
 /*	orm.SetSchema("SAP_ECC")
 	orm.SetTable("PRPS a")
 //	orm.SetPrimaryKey("MANDT")
@@ -67,14 +67,26 @@ func main() {
 //	ret1,_ := hdb.ScanStructIntoMap(sqlmodel)
 //	user := User{SQLModel : sqlmodel,Auth : 2}
 //	ret2,_ := hdb.ScanStructIntoMap(user)*/
-	orm.SetSchema("DEYSUB")
-	orm.SetTable("TESTGOADAPTER")
-	csam := sample{A : 5}
+/*	orm.SetSchema("DEYSUB")
+	orm.SetTable("TESTGOADAPTER")*/
+/*	csam := sample{A : 5}
 	csam1 := sample{A : 9}
 	var properties1 []interface{} 
 	properties1 = append(properties1,csam1,csam)
 	test,_ := orm.FindAll(properties1,true)
-	fmt.Println(test)
+	fmt.Println(test)*/
+	conn, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
+	hdb.CreateStoredProcedure("checkProc.sql",true)
+	conn.Close()
+	conn1, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
+	hdb.SetStoredProcedure("DEYSUB","TESTGOADAPTER2")
+	conn1.Close()
+	conn2, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
+	hdb.CallStoredProcedure("1,'abcd',?",true)
+	conn2.Close()
+	conn3, _ := hdb.Connect("vs3","DEYSUB","Algo..addict965431",true)
+	hdb.DropStoredProcedure(true)
+	conn3.Close()
 //	_ = []sample{csam,csam1}
 //	orm.DeleteAll(csam2,true)
 //	orm.Delete(csam,true)

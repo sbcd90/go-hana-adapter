@@ -7,6 +7,7 @@ import (
 		"strings"
 		"reflect"
 		"errors"
+		"io/ioutil"
 )
 
 type Model struct {
@@ -35,6 +36,8 @@ var resultsMetadata []*odbc.Row
 var systemDSN string
 var userName string
 var passWord string
+var procName string
+var connection *odbc.Connection
 
 func Connect(dsn string, username string, password string, onDebug bool) (conn *odbc.Connection, err *odbc.ODBCError) {
 
@@ -54,6 +57,7 @@ func Connect(dsn string, username string, password string, onDebug bool) (conn *
 		}
 		return
 	}
+	connection = conn
 	return
 }
 
@@ -113,6 +117,17 @@ func (orm *Model) SetView(viewName string) *Model{
 	}
 	tmpconn.Close()
 	return orm
+}
+
+func SetStoredProcedure(schemaName string,procedureName string) (bool){
+
+	procName = "\"" + schemaName + "\".\"" + procedureName + "\""
+	tmpconn,_ := Connect(systemDSN,userName,passWord,false)
+	tmporm := InitializeModel(tmpconn)
+	resultsMetadata,_ = tmporm.Exec("SELECT \"PARAMETER_NAME\" FROM \"SYS\".\"PROCEDURE_PARAMETERS\" where \"SCHEMA_NAME\" = '" + schemaName + "' and \"PROCEDURE_NAME\" = '" + procedureName + "' and \"PARAMETER_TYPE\" = 'OUT'","select")
+	tmpconn.Close()
+
+	return true
 }
 
 func (orm *Model) SetPrimaryKey(primaryKey string) *Model{
@@ -477,11 +492,16 @@ func (orm *Model) Exec(finalQueryString string, stmtType string, args ...interfa
 
 	stmt,err := orm.Db.Prepare(finalQueryString)
 	if err!=nil{
+		fmt.Println(err)
 		return nil,err
 	}
 
-	stmt.Execute("ADMIN")
-	if stmtType!="insert" && stmtType!="update" && stmtType!="delete"{
+	output := stmt.Execute()
+	if output!=nil{
+		fmt.Println(output)
+	}
+
+	if stmtType!="insert" && stmtType!="update" && stmtType!="delete" {
 		rows,err := stmt.FetchAll()
 		if err!=nil{
 			return nil,err
@@ -622,6 +642,53 @@ func (orm *Model) Save(output interface{},onDebug bool) error {
 		orm.Upsert(results,onDebug)
 	}
 
+	return nil
+}
+
+func CreateStoredProcedure(fileName string,onDebug bool) error{
+
+	bytestring,err := ioutil.ReadFile(fileName)
+
+	if err!=nil{
+		return err
+	}
+	storedproc := string(bytestring)
+
+	_,erro := connection.ExecDirect(storedproc)
+
+	if erro!=nil{
+		return erro
+	}
+	return nil
+}
+
+func DropStoredProcedure(onDebug bool) error{
+
+	statement := fmt.Sprintf("DROP PROCEDURE %v",procName)
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	_,erro := connection.ExecDirect(statement)
+
+	if erro!=nil{
+		return erro
+	}
+	return nil
+}
+
+func CallStoredProcedure(paramStr string,onDebug bool) error{
+
+	statement := fmt.Sprintf("CALL %v (%v)",procName,paramStr)
+	if onDebug{
+		fmt.Println(statement)
+	}
+
+	_,erro := connection.ExecDirect(statement)
+
+	if erro!=nil{
+		return erro
+	}
 	return nil
 }
 
