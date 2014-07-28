@@ -113,7 +113,8 @@ func (orm *Model) SetView(viewName string) *Model{
 	tmpconn,_ := Connect(systemDSN,userName,passWord,false)  
 	tmporm := InitializeModel(tmpconn)
 	if orm.SchemaName!=""{
-		resultsMetadata,_ = tmporm.Exec("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"VIEW_COLUMNS\" where \"SCHEMA_NAME\" = '" + orm.SchemaName + "' and \"VIEW_NAME\" = '" + orm.ViewName + "'","select")
+		newViewName := strings.Replace(orm.ViewName,"\"","",-1)
+		resultsMetadata,_ = tmporm.Exec("SELECT \"COLUMN_NAME\" FROM \"SYS\".\"VIEW_COLUMNS\" where \"SCHEMA_NAME\" = '" + orm.SchemaName + "' and \"VIEW_NAME\" = '" + newViewName + "'","select")
 	}
 	tmpconn.Close()
 	return orm
@@ -177,11 +178,22 @@ func (orm *Model) Find(output interface{},onDebug bool) (map[string]interface{},
 		keys = append(keys,key)
 		values = append(values,ConvertAnyTypeToString(val))
 		if args!=""{
-			args = fmt.Sprintf("%v AND %v = %v",args,key,ConvertAnyTypeToString(val))
+			args = fmt.Sprintf("%v AND \"%v\" = %v",args,key,ConvertAnyTypeToString(val))
 		}else{
 			args = fmt.Sprintf("%v = %v",key,val)
 		}
 	}
+
+	if orm.ColumnStr=="*"{
+		var metadata []string
+		for _,rowMeta := range resultsMetadata{
+			metadata = append(metadata,rowMeta.GetString(0))
+		}
+		regexp := fmt.Sprintf("\",\"")
+		orm.ColumnStr = fmt.Sprintf("\"%v\"",strings.Join(metadata,regexp))
+	}
+
+
 	orm.WhereStr = args
 	orm.SetLimit(1)
 	resultsSlice,err := orm.FindMap(onDebug)
@@ -230,13 +242,23 @@ func (orm *Model) FindAll(rowsSlicePtr []interface{},onDebug bool) (resultsSlice
 			keys = append(keys,key)
 			values = append(values,ConvertAnyTypeToString(val))
 			if !strings.HasSuffix(args,"("){
-				args = fmt.Sprintf("%v AND %v = %v",args,key,ConvertAnyTypeToString(val))
+				args = fmt.Sprintf("%v AND \"%v\" = %v",args,key,ConvertAnyTypeToString(val))
 			}else{
-				args = fmt.Sprintf("%v %v = %v",args,key,val)
+				args = fmt.Sprintf("%v \"%v\" = %v",args,key,val)
 			}
 		}
 		args = args + " )"	
 	}
+
+	if orm.ColumnStr=="*"{
+		var metadata []string
+		for _,rowMeta := range resultsMetadata{
+			metadata = append(metadata,rowMeta.GetString(0))
+		}
+		regexp := fmt.Sprintf("\",\"")
+		orm.ColumnStr = fmt.Sprintf("\"%v\"",strings.Join(metadata,regexp))
+	}
+
 	orm.WhereStr = args
 
 	resultsSlice,err = orm.FindMap(onDebug)
@@ -281,9 +303,11 @@ func (orm *Model) GenerateSQL(onDebug bool) (sqlstmt string){
 
 	if orm.ColumnStr !="" && orm.TableName !="" && orm.SchemaName !=""{
 		sqlstmt = fmt.Sprintf("SELECT %v FROM %v.%v",orm.ColumnStr,orm.SchemaName,orm.TableName)
+	}else if orm.ColumnStr !="" && orm.ViewName !="" && orm.SchemaName !=""{
+		sqlstmt = fmt.Sprintf("SELECT %v FROM %v.%v",orm.ColumnStr,orm.SchemaName,orm.ViewName)
 	}else{
 		if onDebug{
-			fmt.Println("Column String or Schema Name or Table Name is not set")
+			fmt.Println("Column String or Schema Name or Table Name(or View Name) is not set")
 		}
 		return sqlstmt
 	}
@@ -371,8 +395,8 @@ func (orm *Model) ScanPK(output interface{}) *Model{
 
 
 	if reflect.TypeOf(reflect.Indirect(reflect.ValueOf(output)).Interface()).Kind() == reflect.Slice {
-		sliceValue := reflect.Indirect(reflect.ValueOf(output))
-		sliceElementType := sliceValue.Type().Elem()
+		sliceValue := (reflect.Indirect(reflect.ValueOf(output)).Index(0)).Interface()
+		sliceElementType := reflect.Indirect(reflect.ValueOf(sliceValue)).Type()
 
 		for count :=0;count<sliceElementType.NumField();count++{
 			bb := sliceElementType.Field(count).Tag
@@ -412,7 +436,7 @@ func (orm *Model) Upsert(properties map[string]interface{},onDebug bool) (int64,
 
 	for key,val := range properties {
 		keys = append(keys,key)
-		placeholders = append(placeholders,val.(string))
+		placeholders = append(placeholders,ConvertAnyTypeToString(val))
 		orm.ParamIteration++
 		args = append(args,val)
 	}
@@ -586,7 +610,7 @@ func (orm *Model) DeleteAll(rowsSlicePtr interface{},onDebug bool) (int64,error)
 		if err!=nil{
 			return 0,err
 		}
-		id := results[strings.ToLower(orm.PrimaryKey)]
+		id := results[orm.PrimaryKey]
 		switch id.(type){
 		case string :
 						ids = append(ids,id.(string))
