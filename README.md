@@ -27,6 +27,12 @@ All examples can be checked in /tests/testOrm.go
 Examples
 ========
 
-Check the tests directory for the test cases
+- Check the "/src/tests" directory for the test cases
 
-Travis-CI tests to be provided.
+- Travis-CI tests to be provided.
+
+ToDo
+====
+
+- Bug fixes
+- Adding more test cases
