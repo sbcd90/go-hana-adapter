@@ -1,4 +1,4 @@
-Go-HANA-Adapter
+go-hana-adapter
 ===============
 
 SAP HANA adapter for GoLang
@@ -12,6 +12,17 @@ Installation
 - execute make.bat or make.bash based on the current OS
 - Go into the directory hdb
 - execute "go install"
+
+Features
+========
+
+- Supports SAP HANA View querying
+- Supports Stored Procedure creation, calling, & dropping
+- Returns Go maps which are easy to retrieve data from
+- Allows developers to easily query using api s like Find,FindAll,Save etc.
+- Supports Update,Upsert, & Delete
+
+All examples can be checked in /tests/testOrm.go 
 
 Examples
 ========
